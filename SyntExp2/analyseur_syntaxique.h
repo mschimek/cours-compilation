@@ -1,0 +1,14 @@
+void expression(void);
+void expressionBis(void);
+void conjonction(void);
+void conjonctionBis(void);
+void negation(void);
+void comparaison(void);
+void comparaisonBis(void);
+void expArith(void);
+void expArithBis(void);
+void terme(void);
+void termeBis(void);
+void facteur(void);
+void var(void);
+void optIndice(void);
