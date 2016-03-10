@@ -25,6 +25,7 @@ test_yylex: test_yylex.c $(OBJ)
 
 clean:
 	- rm -f $(OBJ)
-	- rm -f analyseur_lexical	
+	- rm -f analyseur_lexical
+	- rm -f test_yylex
 	- rm -f analyseur_syntaxique_LL
 	- rm -f analyseur_arbre_abstrait
