@@ -91,7 +91,7 @@ char lireCar(void)
   yytext[yyleng++] = fgetc(yyin);
   yytext[yyleng] = '\0';
   i++;
-  printf("Lire: %i \n",i);
+  //printf("Lire: %i \n",i);
   return yytext[yyleng - 1];
 }
 
@@ -114,15 +114,15 @@ int analyser_mot(char c) {
 			c = lireCar();
 
 			if (count < YYTEXT_MAX && !(is_num(c) || is_min(c) || is_maj(c) || c == '_')) {
-				printf("BEFORE, count = %i\n", count);
+				/*//printf("BEFORE, count = %i\n", count);
 				for (int i = 0; i < YYTEXT_MAX - 1; i++) 
 					printf("%c",yytext[i]);
-				printf("\n");
+				printf("\n");*/
 				delireCar();
-				printf("AFTER\n");
+				/*printf("AFTER\n");
 				for (int i = 0; i < YYTEXT_MAX - 1; i++) 
 					printf("%c",yytext[i]);
-				printf("\n");
+				printf("\n");*/
 				return ID_VAR;
 			}
 			else if (count >= YYTEXT_MAX) {

@@ -3,9 +3,12 @@ CC = gcc
 LIBS = -lm 
 CCFLAGS = -Wall -ggdb3 -std=gnu11
 
-OBJ = analyseur_lexical.o util.o premiers.o suivants.o
+OBJ = analyseur_lexical.o util.o premiers.o suivants.o affiche_arbre_abstrait.o syntabs.o
 
-all: analyseur_syntaxique_LL
+all: analyseur_arbre_abstrait
+
+analyseur_arbre_abstrait: analyseur_arbre_abstrait.c $(OBJ)
+	$(CC) $(CCFLAGS) -o analyseur_arbre_abstrait analyseur_arbre_abstrait.c $(OBJ)
 
 analyseur_syntaxique_LL: analyseur_syntaxique_LL.c $(OBJ)
 	$(CC) $(CCFLAGS) -o analyseur_syntaxique_LL analyseur_syntaxique_LL.c $(OBJ)
@@ -24,3 +27,4 @@ clean:
 	- rm -f $(OBJ)
 	- rm -f analyseur_lexical	
 	- rm -f analyseur_syntaxique_LL
+	- rm -f analyseur_arbre_abstrait
