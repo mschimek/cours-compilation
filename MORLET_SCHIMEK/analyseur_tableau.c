@@ -6,9 +6,8 @@
 #include "premiers.h"
 #include "suivants.h"
 #include "syntabs.h"
-#include "analyseur_arbre_abstrait.h"
-#include "affiche_arbre_abstrait.h"
-
+#include "analyseur_tableau.h"
+#include "construire_tableau.h"
 #define LENGTH 100
 char nom[LENGTH];
 char valeur[LENGTH];
@@ -992,7 +991,7 @@ int main(int argc, char **argv) {
   /*printf("----------------------------------------------------------------------------------\n");
   printf("----------------------------------------------------------------------------------\n");
   printf("----------------------------------------------------------------------------------\n");*/
-  affiche_n_prog(prog);
+  construire_n_prog(prog);
   return 0;
 }
 
