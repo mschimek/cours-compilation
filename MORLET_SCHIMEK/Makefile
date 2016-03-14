@@ -5,12 +5,13 @@ CCFLAGS = -Wall -ggdb3 -std=gnu11
 
 OBJ = analyseur_lexical.o util.o premiers.o suivants.o affiche_arbre_abstrait.o syntabs.o
 
-OBJ2 = analyseur_lexical.o util.o premiers.o suivants.o  syntabs.o dico.o construire_tableau.o
+OBJ2 = analyseur_lexical.o util.o premiers.o suivants.o  syntabs.o dico.o  parcours_arbre.o
 
-all: analyseur_tableau
+all: analyseur
 
-analyseur_tableau: analyseur_tableau.c $(OBJ2)
-	$(CC) $(CCFLAGS) -o analyseur_tableau analyseur_tableau.c $(OBJ2)
+
+analyseur: analyseur.c $(OBJ2)
+	$(CC) $(CCFLAGS) -o analyseur analyseur.c $(OBJ2)
 
 analyseur_arbre_abstrait: analyseur_arbre_abstrait.c $(OBJ)
 	$(CC) $(CCFLAGS) -o analyseur_arbre_abstrait analyseur_arbre_abstrait.c $(OBJ)
@@ -35,3 +36,4 @@ clean:
 	- rm -f test_yylex
 	- rm -f analyseur_syntaxique_LL
 	- rm -f analyseur_arbre_abstrait
+	- rm -f analyseur

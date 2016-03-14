@@ -3,7 +3,7 @@
 
 #include "syntabs.h"
 
-void construire_n_prog(n_prog *n);
+void parcourir_n_prog(n_prog *n);
 
 #endif
 
