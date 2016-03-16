@@ -5,7 +5,7 @@ CCFLAGS = -Wall -ggdb3 -std=gnu11
 
 OBJ = analyseur_lexical.o util.o premiers.o suivants.o affiche_arbre_abstrait.o syntabs.o
 
-OBJ2 = analyseur_lexical.o util.o premiers.o suivants.o  syntabs.o dico.o  parcours_arbre.o
+OBJ2 = analyseur_lexical.o util.o premiers.o suivants.o  syntabs.o affiche_arbre_abstrait.o dico.o  parcours_arbre.o
 
 all: analyseur
 
