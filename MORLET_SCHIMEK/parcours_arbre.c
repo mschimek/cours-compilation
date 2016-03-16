@@ -154,7 +154,9 @@ void parcourir_instr_affect(n_instr *n)
 	if (n->u.affecte_.var->type == simple) {
 		// variable simple
 		int adresse = dico.tab[i].adresse;
-		printf("sw $t%d %d\n", reg2, adresse);
+		int reg3 = allouer_reg();
+		printf("la $t%d, %s\n",reg3,dico.tab[i].identif);
+		printf("sw $t%d ($t%d)\n", reg2, reg3);
 	}
 	else {
 		// tableau
@@ -164,7 +166,7 @@ void parcourir_instr_affect(n_instr *n)
 		printf("mult $t%d, $t%d\n", reg2, reg3);
 		printf("mflo %t%d\n",reg2);
 		printf("addi $t%d, $t%d, %d\n", reg2, reg2, adresse);
-		printf("sw $t%d %d\n", reg1, adresse);
+		printf("sw ($t%d) %d\n", reg1, adresse);
 	}
   
 }
@@ -513,7 +515,9 @@ int parcourir_var_simple(n_var *n)
 			erreur("nom utilisée n'est pas une variable de type entier");
 		}
 		int reg = allouer_reg();
-		printf("lw $t%d, %d\t# lit variable dans registre\n", reg, dico.tab[i].adresse);
+		printf("la $t%d, %s\t#charge adresse de label\n",reg, n->nom);
+		printf("lw $t%d, ($t%d)\t# lit variable dans registre\n",reg,reg);
+		//printf("lw $t%d, %d\t# lit variable dans registre\n", reg, dico.tab[i].adresse);
 		return reg;
 	}
 	else {
