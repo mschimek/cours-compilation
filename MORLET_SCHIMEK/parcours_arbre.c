@@ -52,6 +52,27 @@ void depiler_registre(char reg, char num) {
 	
 	printf("\taddi $sp, $sp, 4\n");
 }
+
+int nb_variable_locale() {
+	int counter = 0;
+	int i = dico.sommet - 1;
+	while(dico.tab[i].classe == C_VARIABLE_LOCALE) {
+		i--;
+		counter++;
+	}
+	return counter;
+}
+
+int nb_argument() {
+	int nb_local = nb_variable_locale();
+	int counter = 0;
+	int i = dico.sommet -1 - nb_local;
+	while(dico.tab[i].classe == C_ARGUMENT) {
+		i--;
+		counter++;
+	}
+	return counter;
+}
 /*-------------------------------------------------------------------------*/
 int allouer_reg() {
 	static int n;
@@ -168,10 +189,10 @@ void parcourir_instr_tantque(n_instr *n)
   parcourir_exp(n->u.tantque_.test);
   depiler_registre(reg, num0);
   printf("\tli $%c%c, -1\t\t# tant que\n", reg, num1);
-  printf("\tbne $%c%c, $c%d, %s\n", reg, num0, reg, num1, suite);
+  printf("\tbne $%c%c, $%c%c, %s\n", reg, num0, reg, num1, suite);
   parcourir_instr(n->u.tantque_.faire);
   printf("\tj %s\n", test);
-  printf("%s:\n", suite);
+  printf("%s:\n", suite); 
   //parcourir_balise_fermante(fct, trace_abs);
 }
 
@@ -211,14 +232,23 @@ void parcourir_instr_affect(n_instr *n)
 	int i = rechercheExecutable(n->u.affecte_.var->nom);
 	if (n->u.affecte_.var->type == simple) {
 		// variable simple
-		int adresse = dico.tab[i].adresse;
+		
 		int reg3 = allouer_reg();
 		
 		//printf("la $t%d, %s\n",reg3,dico.tab[i].identif);
 		char num = '0';
 		char reg = 't';
 		depiler_registre(reg, num);
-		printf("\tsw $%c%c, %s\t\t# stocke dans variable\n", reg, num, dico.tab[i].identif);
+		if (dico.tab[i].classe == C_VARIABLE_GLOBALE) 
+			printf("\tsw $%c%c, %s\t\t# stocke dans variable globale\n", reg, num, dico.tab[i].identif);
+		if (dico.tab[i].classe == C_VARIABLE_LOCALE) {
+			int adresse = -8 - dico.tab[i].adresse;
+			printf("\tsw $%c%c, %d($fp)\t\t# stocke dans variable locale\n", reg, num, adresse);
+		}
+		if (dico.tab[i].classe == C_ARGUMENT) {
+			int adresse = 4 * nb_argument() - dico.tab[i].adresse;
+			printf("\tsw $%c%c, %d($fp)\t\t# stocke dans argument\n", reg, num, adresse);
+		}
 	}
 	else {
 		// tableau
@@ -254,7 +284,11 @@ int parcourir_appel(n_appel *n)
 {
 	int nbArg = 0;
 	int i = -1;
+	printf("\tsubi $sp, $sp, 4\t# mot sur la pile pour valeur de retour\n");
+	
+	// parcourir_l_exp stocke les arguments sur la pile
 	nbArg = parcourir_l_exp(n->args);
+	
 	i = rechercheExecutable(n->fonction);
 	if (i == -1) {
 		erreur("fonction n'est pas declarée");
@@ -267,7 +301,12 @@ int parcourir_appel(n_appel *n)
 		printf("n: arg %d\n", nbArg);
 		erreur("fonction %s ne satisfait pas le type necessaire");
 	}
-	
+	 
+	printf("\tjal %s\t\t\t# appel fonction\n",n->fonction);
+	int j;
+	for (j = 0; j < nbArg; j++) {
+		depiler_registre('t','0');
+	}
 	// pour l'instant
 	return -1;
 }
@@ -276,10 +315,33 @@ int parcourir_appel(n_appel *n)
 
 void parcourir_instr_retour(n_instr *n)
 {
-  char *fct = "instr_retour";
-  //parcourir_balise_ouvrante(fct, trace_abs);
-  parcourir_exp(n->u.retour_.expression);
-  //parcourir_balise_fermante(fct, trace_abs);
+	
+	parcourir_exp(n->u.retour_.expression);
+	
+	
+	if (n->u.retour_.expression) {
+		int adresse = 4 * (nb_argument() + 1);
+		char reg = 't';
+		char num = '0';
+		depiler_registre(reg, num);
+		printf("\tsw $%c%c, %d($fp)\t\t# return\n", reg, num, adresse);
+		printf("\tmove $sp, $fp\n");
+		printf("\tla $sp, -4($fp)\n");
+		depiler_registre('r','a');
+		depiler_registre('f','p');
+		printf("\tjr $ra\t\t# jump back\n");
+	}
+	else {
+		int adresse = 4 * (nb_argument() + 1);
+		printf("\tli $t0, 0\t\t\t# default return = 0\n");
+		printf("\tsw $t0, %d($fp)\n", adresse);
+		printf("\tmove $sp, $fp\n");
+		printf("\tla $sp, -4($fp)\n");
+		depiler_registre('r','a');
+		depiler_registre('f','p');
+		printf("\tjr $ra\t\t# jump back\n");
+	}
+	
 
 }
 
@@ -294,7 +356,7 @@ void parcourir_instr_ecrire(n_instr *n)
   depiler_registre(reg, num);
   printf("\tli $v0, 1\t\t\n");
   printf("\tmove $a0, $%c%c\n", reg, num);
-  printf("\tsyscall\t\t\t#imprimer registre $t%d\n", reg);
+  printf("\tsyscall\t\t\t#imprimer registre $%c%c\n", reg, num );
 }
 
 /*-------------------------------------------------------------------------*/
@@ -356,24 +418,27 @@ int parcourir_opExp(n_exp *n)
 	//parcourir_balise_ouvrante(fct, trace_abs);
 	if(n->u.opExp_.op == plus) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		printf("\tadd $%c%c, $%c%c, $%c%c\t\t# addition\n",reg, '0', reg, '1', reg, '0');
 		empiler_registre(reg,'0');
 		return numero1;
 	}
 	else if(n->u.opExp_.op == moins) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		printf("\tsub $%c%c, $%c%c, $%c%c\t\t# soustraction\n",reg, '0', reg, '0', reg, '1');
 		empiler_registre(reg,'0');
 		return numero1;
 	}
 	else if(n->u.opExp_.op == fois) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		printf("\tmult $%c%c, $%c%c\t\t# multiplication\n", reg, '0', reg, '1');
 		printf("\tmflo $%c%c\n", reg, '0');
 		empiler_registre(reg,'0');
@@ -381,8 +446,9 @@ int parcourir_opExp(n_exp *n)
 	}
 	else if(n->u.opExp_.op == divise){
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		printf("\tdivide $%c%c, $%c%c\t\t# division\n", reg, '0', reg, '1');
 		printf("\tmflo $%c%c\n", reg, '0');
 		empiler_registre(reg,'0');
@@ -394,24 +460,26 @@ int parcourir_opExp(n_exp *n)
 	 *************************************************/
 	else if(n->u.opExp_.op == egal){ 
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		char s[20];
 		char r[20];
 		get_label("e", s);
 		get_label("e", r);
 		printf("\tbeq $%c%c, $%c%c, %s\t\t# tester de l'egalite\n", reg, '0', reg, '1', s);
-		printf("\tli $%c%c, '0'\n", reg, '0');
+		printf("\tli $%c%c, 0\n", reg, '0');
 		printf("\tj %s\n", r);
-		printf("%s:\tli $%c%c, -'1'\n", s, reg, '0');
+		printf("%s:\tli $%c%c, -1\n", s, reg, '0');
 		printf("%s:\n",r);
 		empiler_registre(reg,'0');
 		return numero1;
 	}
 	else if(n->u.opExp_.op == diff) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		char s[20];
 		char r[20];
 		get_label("e", s);
@@ -426,8 +494,9 @@ int parcourir_opExp(n_exp *n)
 	}
 	else if(n->u.opExp_.op == inf) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		char s[20];
 		char r[20];
 		get_label("e", s);
@@ -442,8 +511,9 @@ int parcourir_opExp(n_exp *n)
 	}
 	else if(n->u.opExp_.op == infeg) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		char s[20];
 		char r[20];
 		get_label("e", s);
@@ -458,8 +528,9 @@ int parcourir_opExp(n_exp *n)
 	}
 	else if(n->u.opExp_.op == ou) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		char s[20];
 		char r[20];
 		get_label("e", s);
@@ -476,8 +547,9 @@ int parcourir_opExp(n_exp *n)
 	}
 	else if(n->u.opExp_.op == et) {
 		char reg = 't';
-		depiler_registre(reg, '0');
 		depiler_registre(reg, '1');
+		depiler_registre(reg, '0');
+		
 		char s[20];
 		char r[20];
 		get_label("e", s);
@@ -597,13 +669,22 @@ void parcourir_foncDec(n_dec *n)
 		printf("\tmove $fp, $sp\t\t# nouvelle valeur de $fp\n");
 		empiler_registre('r','a');
 		
+		// set default value for the return value;
+		
 		contexte = C_ARGUMENT;
 		int nombre = parcourir_l_dec(n->u.foncDec_.param);
+		
+		printf("#\t\t\t\t\t\t\t\t\t\t\t\t\t\tnb_argument() = %d\n", nb_argument());
+		int adresse = 4 * (nb_argument() + 1);
+		printf("\tli $t0, 0\t\t# default return = 0\n");
+		printf("\tsw $t0, %d($fp)\n", adresse);
+		
 		contexte = C_VARIABLE_LOCALE;
 		int nbLocal = parcourir_l_dec(n->u.foncDec_.variables);
+		printf("#\t\t\t\t\t\t\t\t\t\t\t\t\t\tnb_local = %d\n", nbLocal);
 		nbLocal *= 4;
 		
-		printf("\tsubi $sp, $sp, %d\t\t# allouer de la place pour les variables locales\n", nbLocal);
+		printf("\tsubi $sp, $sp, %d\t# allouer de la place pour les variables locales\n", nbLocal);
 		
 		parcourir_instr(n->u.foncDec_.corps);
 		dico.tab[i].complement = nombre;
@@ -611,10 +692,12 @@ void parcourir_foncDec(n_dec *n)
 		affiche_dico();
 #endif 
 		
-		printf("\taddi $sp, $sp, %d\t\t# deallouer de la place pour les variables locales\n", nbLocal);
+		printf("\taddi $sp, $sp, %d\t# deallouer de la place pour les variables locales\n", nbLocal);
+		printf("\tmove $sp, $fp\n");
+		printf("\tla $sp, -4($fp)\n");
 		depiler_registre('r','a');
 		depiler_registre('f','p');
-		printf("\tjr $ra\t\t# return\n");
+		printf("\tjr $ra\t\t# jump back\n");
 		sortieFonction();
 	}
 	else {
@@ -714,22 +797,29 @@ int parcourir_var_simple(n_var *n, int empiler_Valeur)
 		i = rechercheExecutable(n->nom);
 		if (i == -1)
 			erreur("variable n'est pas déclarée");
-		else if (dico.tab[i].type != T_ENTIER) {
+	     if (dico.tab[i].type != T_ENTIER) {
 			erreur("nom utilisée n'est pas une variable de type entier");
 		}
-		int reg1 = allouer_reg();
-		//printf("la $t%d, %s\t#charge adresse de label\n",reg, n->nom);
-		if (empiler_Valeur) {
-			char num = '0';
-			char reg = 't';
-			printf("\tlw $%c%c, %s\t\t# lit variable dans registre\n", reg, num, dico.tab[i].identif);
+	}
+	if (empiler_Valeur) {
+		char num = '0';
+		char reg = 't';
+		if (dico.tab[i].classe == C_VARIABLE_GLOBALE) {
+			printf("\tlw $%c%c, %s\t\t# lit variable globale dans registre\n", reg, num, dico.tab[i].identif);
 			empiler_registre(reg, num);
 		}
-		return reg1;
+		if (dico.tab[i].classe == C_VARIABLE_LOCALE) {
+			int adresse = -8 - dico.tab[i].adresse;
+			printf("\tlw $%c%c, %d($fp)\t\t # lit variable locale dans registre\n", reg, num, adresse);
+			empiler_registre(reg, num);
+		}
+		if (dico.tab[i].classe == C_ARGUMENT) {
+			int adresse = 4*nb_argument() - dico.tab[i].adresse;
+			printf("\tlw $%c%c, %d($fp)\t\t # lit argument dans registre\n", reg, num, adresse);
+			empiler_registre(reg, num);
+		}
 	}
-	else {
-		return -1;
-	}
+	return 1;
 }
 
 /*-------------------------------------------------------------------------*/
@@ -756,6 +846,7 @@ int parcourir_var_indicee(n_var *n, int empiler_Valeur)
 		char reg = 't';
 		char num = '0';
 		depiler_registre(reg, num);
+		printf("\tadd $%c%c, $%c%c, $%c%c\n", reg, num, reg, num, reg, num);
 		printf("\tadd $%c%c, $%c%c, $%c%c\n", reg, num, reg, num, reg, num);
 		printf("\tlw $%c%c, %s($%c%c)\n", reg, num, dico.tab[i].identif, reg, num);
 		empiler_registre(reg, num);
