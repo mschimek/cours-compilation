@@ -407,7 +407,7 @@ int parcourir_varExp(n_exp *n)
 
 /*-------------------------------------------------------------------------*/
 int parcourir_opExp(n_exp *n)
-{
+{    
 	int numero1, numero2;
 	if( n->u.opExp_.op1 != NULL ) {
 		numero1 = parcourir_exp(n->u.opExp_.op1);
@@ -535,12 +535,12 @@ int parcourir_opExp(n_exp *n)
 		char r[20];
 		get_label("e", s);
 		get_label("e", r);
-		printf("\tli $%c%c, -1\t\t# test de ||\n",reg, 2);
-		printf("\tbe $%c%c, $%c%c, %s\n", reg, '0', reg, 2, s);
-		printf("\tbe $%c%c, $%c%c, %s\n", reg, '1', reg, 2, s);
-		printf("\tli $%c%c, '0'\n", reg, '0');
+		printf("\tli $%c%c, 0\t\t# test de ||\n",reg, '2');
+		printf("\tbne $%c%c, $%c%c, %s\n", reg, '0', reg, '2', s);
+		printf("\tbne $%c%c, $%c%c, %s\n", reg, '1', reg, '2', s);
+		printf("\tli $%c%c, 0\n", reg, '0');
 		printf("\tj %s\n", r);
-		printf("%s: li $%c%c -1\n", reg, '0');
+		printf("%s: li $%c%c -1\n",s, reg, '0');
 		printf("%s:\n",r);
 		empiler_registre(reg,'0');
 		return numero1;
@@ -554,14 +554,14 @@ int parcourir_opExp(n_exp *n)
 		char r[20];
 		get_label("e", s);
 		get_label("e", r);
-		printf("\tli $%c%c, '0'\t\t# test de &&\n",reg, 2);
-		printf("\tbe $%c%c, $%c%c, %s\n", reg, '0', reg, 2, s);
-		printf("\tbe $%c%c, $%c%c, %s\n", reg, '1', reg, 2, s);
+		printf("\tli $%c%c, 0\t\t# test de &&\n",reg, '2');
+		printf("\tbeq $%c%c, $%c%c, %s\n", reg, '0', reg, '2', s);
+		printf("\tbeq $%c%c, $%c%c, %s\n", reg, '1', reg, '2', s);
 		printf("\tli $%c%c, -1\n", reg, '0');
 		printf("\tj %s\n", r);
-		printf("%s: li $%c%c '0'\n", reg, '0');
+		printf("%s: li $%c%c 0\n",s, reg, '0');
 		printf("%s:\n",r);
-		empiler_registre(reg,'0');
+		empiler_registre(reg,'0'); 
 		return numero1;
 	}
 	else if(n->u.opExp_.op == non) {
@@ -571,16 +571,16 @@ int parcourir_opExp(n_exp *n)
 		char r[20];
 		get_label("e", s);
 		get_label("e", r);
-		printf("\tli $%c%c, '0'\t\t# ! operator\n",reg, 2);
-		printf("\tbe $%c%c, $%c%c, %s\n", reg, '0', reg, 2, s);
-		printf("\tli $%c%c, '0'\n", reg, '0');
+		printf("\tli $%c%c, 0\t\t# ! operator\n",reg, '2');
+		printf("\tbeq $%c%c, $%c%c, %s\n", reg, '0', reg, '2', s);
+		printf("\tli $%c%c, 0\n", reg, '0');
 		printf("\tj %s\n", r);
-		printf("%s: li $%c%c -1\n", reg, '0');
+		printf("%s: li $%c%c -1\n",s, reg, '0');
 		printf("%s:\n",r);
 		empiler_registre(reg,'0');
 		return numero1;
 	}  
-
+	
 //parcourir_balise_fermante(fct, trace_abs);
 }
 
@@ -790,17 +790,16 @@ int parcourir_var_non_empiler(n_var *n) {
 /*-------------------------------------------------------------------------*/
 int parcourir_var_simple(n_var *n, int empiler_Valeur)
 {
-	// on ne cherche pas encore en l'ordre
+	// on ne cherche pas encore dans l'ordre
 	//parcourir_element("var_simple", n->nom, trace_abs);
-	int i = rechercheDeclarative(n->nom);
-	if (i == -1) {
-		i = rechercheExecutable(n->nom);
-		if (i == -1)
-			erreur("variable n'est pas déclarée");
-	     if (dico.tab[i].type != T_ENTIER) {
-			erreur("nom utilisée n'est pas une variable de type entier");
-		}
+	
+	int i = rechercheExecutable(n->nom);
+	if (i == -1)
+		erreur("variable n'est pas déclarée");
+	    if (dico.tab[i].type != T_ENTIER) {
+		erreur("nom utilisée n'est pas une variable de type entier");
 	}
+	
 	if (empiler_Valeur) {
 		char num = '0';
 		char reg = 't';

@@ -625,7 +625,7 @@ n_exp * negation(void)
 		afficher_sans_afficher();
 		uniteCourante = yylex();
 		res = comparaison();
-		exp = cree_n_exp_op(fois, NULL, res);
+		exp = cree_n_exp_op(non, NULL, res);
 		goto end;
 	}
 	else if (est_premier(_comparaison_, uniteCourante)) {
